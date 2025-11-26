@@ -10,7 +10,7 @@
 
 依赖  
 ```
-requests
+pip install requests cryptography
 ```
 
 ---
@@ -171,4 +171,7 @@ print("返回体:", resp)
 
 1. **bindNumber**、**chipId**、**model** 必须与实际手表一致，否则初始化会失败。  
 2. `encVer=1` 使用内置 RSA 公钥，无需额外密钥。  
+
 3. 若使用代理，请确保代理支持 CONNECT 隧道，且不会篡改 HTTPS 证书链。
+
+4. 本项目仅供学习参考，使用本项目造成的一切后果由本人承担。
