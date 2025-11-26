@@ -5,6 +5,8 @@ from ..utils.cryptoutils import CryptoUtils
 from ..utils.httphelper import HttpHelper
 from ..exception.account_wrong_error import AccountWrongError
 from ..exception.enc_ver_wrong_error import EncVerWrongError
+from ..api import WATCH
+from ..api import BIND_NUMBER
 
 class XTCWatch:
     """
@@ -21,9 +23,11 @@ class XTCWatch:
     keyId = ''
     eebbkKey = ''
     logger = None
+    version = ''
 
     def __init__(self, bindNumber: str, chipId: str, model: str, encVer: int = 1, selfKey: str = None,
-                 log: bool = False, logLevel = logging.WARNING, proxies = None):
+                 log: bool = False, logLevel = logging.WARNING, proxies = None, verify = True,
+                 loadWatchId=True, watchId='', version='2.0.0'):
         """
         初始化XTCWatch类
 
@@ -37,12 +41,15 @@ class XTCWatch:
             logLevel: 日志等级
             proxies: 代理设置
         """
+        self.nick_name = ''
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logLevel)
         self.bindNumber = bindNumber
         self.chipId = chipId
         self.model = model
+        self.version = version
         self.proxies = proxies
+        self.verify = verify
         if log:
             logging.basicConfig(
                 level=logLevel,
@@ -69,18 +76,21 @@ class XTCWatch:
             self.keyId = splitSelfKey[0]
         else:
             raise EncVerWrongError()
+        if loadWatchId:
+            self.reload()
+        else:
+            self.watchId = watchId
 
-        self.loadWatchId()
-
-    def loadWatchId(self):
-        response = self.request('POST', 'http://watch.okii.com/watchaccount/bindnumber',
+    def reload(self):
+        response = self.request('POST', WATCH + BIND_NUMBER,
                                 {'bindNumber': self.bindNumber})
         # print(response)
         resp_data = json.loads(response)
         if resp_data.get('code') == '000001' and resp_data.get('data') != None:
             self.watchId = resp_data.get('data').get('id')
-            name = resp_data.get('data').get('name')
-            self.logger.info('成功绑定账号:{}({})'.format(name, self.watchId))
+            self.nick_name = resp_data.get('data').get('name')
+            self.version = resp_data.get('data').get('firmware')
+            self.logger.info('成功绑定账号:{}({})'.format(self.nick_name, self.watchId))
         else:
             raise AccountWrongError(resp_data.get('code'))
 
@@ -88,34 +98,36 @@ class XTCWatch:
         if isinstance(data, dict):
             data = json.dumps(data)
         if self.encVer == 0:
-            headers = HttpHelper.buildRequestHeaderWithoutEncrypt(self.bindNumber, self.watchId, self.chipId, self.model)
-            return requests.request(method, url, headers=headers, data=data, proxies=self.proxies).text
+            headers = HttpHelper.buildRequestHeaderWithoutEncrypt(self.bindNumber, self.watchId, self.chipId, self.model, self.version)
+            return requests.request(method, url, headers=headers, data=data, proxies=self.proxies, verify=self.verify).text
         elif self.encVer == 1:
             aesKey = CryptoUtils.getAesKey()
             headers = HttpHelper.buildRequestHeaderV1(self.bindNumber, self.watchId, self.chipId, self.model, url,
-                                                      data, aesKey)
+                                                      data, aesKey, self.version)
             if data is not None:
                 data = HttpHelper.aesEncrypt(data, aesKey)
-            resp = requests.request(method, url, headers=headers, data=data, proxies=self.proxies)
+            resp = requests.request(method, url, headers=headers, data=data, proxies=self.proxies, verify=self.verify)
             return HttpHelper.aesDecrypt(resp.text, aesKey) if resp.headers.get(
                 'encrypted') == 'encrypted' else resp.text
 
         elif self.encVer == 2:
             aesKey = CryptoUtils.getAesKey()
             headers = HttpHelper.buildRequestHeaderV2(self.bindNumber, self.watchId, self.chipId, self.model,
-                                                      self.keyId + ':' + self.rsaKey, url, data, aesKey)
+                                                      self.keyId + ':' + self.rsaKey, url, data, aesKey,
+                                                      self.version)
             if data is not None:
                 data = HttpHelper.aesEncrypt(data, aesKey)
-            resp = requests.request(method, url, headers=headers, data=data, proxies=self.proxies)
+            resp = requests.request(method, url, headers=headers, data=data, proxies=self.proxies, verify=self.verify)
             return HttpHelper.aesDecrypt(resp.text, aesKey) if resp.headers.get(
                 'encrypted') == 'encrypted' else resp.text
 
         elif self.encVer == 3:
             headers = HttpHelper.buildRequestHeaderV3(self.bindNumber, self.watchId, self.chipId, self.model, url,
-                                                      data, self.aesKey, self.eebbkKey, self.keyId)
+                                                      data, self.aesKey, self.eebbkKey, self.keyId,
+                                                      self.version)
             if data is not None:
                 data = HttpHelper.aesEncrypt(data, self.aesKey)
-            resp = requests.request(method, url, headers=headers, data=data, proxies=self.proxies)
+            resp = requests.request(method, url, headers=headers, data=data, proxies=self.proxies, verify=self.verify)
             return HttpHelper.aesDecrypt(resp.text, self.aesKey) if resp.headers.get(
                 'encrypted') == 'encrypted' else resp.text
         else:
