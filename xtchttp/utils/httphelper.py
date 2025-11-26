@@ -36,7 +36,7 @@ class HttpHelper:
         return CryptoUtils.rsaEncrypt(aesKey, rsaKey)
 
     @staticmethod
-    def buildRequestHeaderWithoutEncrypt(bind, watchId, chipid, model):
+    def buildRequestHeaderWithoutEncrypt(bind, watchId, chipid, model, version="2.0.0"):
         return {
             "uuid": CryptoUtils.getUuid(1),
             "model": model,
@@ -46,7 +46,7 @@ class HttpHelper:
             "Eebbk-Sign": "0",
             "Base-Request-Param": HttpHelper.buildBaseRequestParam(bind, watchId, chipid),
             "dataCenterCode": "CN_BJ",
-            "Version": "W_2.9.9",
+            "Version": F"W_{version}",
             "Grey": "0",
             "Accept-Language": "zh-CN",
             "Watch-Time-Zone": "GMT+08:00",
@@ -57,7 +57,7 @@ class HttpHelper:
         }
 
     @staticmethod
-    def buildRequestHeaderV1(bind, watchId, chipid, model, url, data, aesKey):
+    def buildRequestHeaderV1(bind, watchId, chipid, model, url, data, aesKey, version="2.0.0"):
         param = HttpHelper.buildBaseRequestParam(bind, watchId, chipid)
         eebbkSign = HttpHelper.sign(url, param, data, aesKey)
         eebbkKey = HttpHelper.getEebbkKeyV1(aesKey)
@@ -73,7 +73,7 @@ class HttpHelper:
             "Eebbk-Key": eebbkKey,
             "encrypted": "encrypted",
             "dataCenterCode": "CN_BJ",
-            "Version": "W_1.9.9",
+            "Version": f"W_{version}",
             "Grey": "0",
             "Accept-Language": "zh-CN",
             "Watch-Time-Zone": "GMT+08:00",
@@ -85,7 +85,7 @@ class HttpHelper:
         return headers
 
     @staticmethod
-    def buildRequestHeaderV2(bind, watchId, chipid, model, selfKey, url, data, aesKey):
+    def buildRequestHeaderV2(bind, watchId, chipid, model, selfKey, url, data, aesKey, version="2.0.0"):
         a = selfKey.split(':')
         rsaKey = a[1]
         keyId = a[0]
@@ -105,7 +105,7 @@ class HttpHelper:
             "Eebbk-Key-Id": keyId,
             "encrypted": "encrypted",
             "dataCenterCode": "CN_BJ",
-            "Version": "W_1.9.9",
+            "Version": f"W_{version}",
             "Grey": "0",
             "Accept-Language": "zh-CN",
             "Watch-Time-Zone": "GMT+08:00",
@@ -117,7 +117,7 @@ class HttpHelper:
         return headers
 
     @staticmethod
-    def buildRequestHeaderV3(bind, watchId, chipid, model, url, data, aesKey, eebbkKey, keyId):
+    def buildRequestHeaderV3(bind, watchId, chipid, model, url, data, aesKey, eebbkKey, keyId, version="2.0.0"):
         param = HttpHelper.buildBaseRequestParam(bind, watchId, chipid)
         eebbkSign = HttpHelper.sign(url, param, data, aesKey)
         baseRequestParam = HttpHelper.aesEncrypt(param, aesKey)
@@ -133,7 +133,7 @@ class HttpHelper:
             "Eebbk-Key-Id": keyId,
             "encrypted": "encrypted",
             "dataCenterCode": "CN_BJ",
-            "Version": "W_1.9.9",
+            "Version": f"W_{version}",
             "Grey": "0",
             "Accept-Language": "zh-CN",
             "Watch-Time-Zone": "GMT+08:00",
